@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PromptPolarQuant</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3350;
+    --accent: #6c63ff;
+    --accent2: #00d4aa;
+    --text: #e8eaf6;
+    --text2: #8b92b8;
+    --red: #ff5f7e;
+    --green: #00d4aa;
+    --yellow: #ffd166;
+    --radius: 12px;
+    --font: 'Segoe UI', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 48px;
+  }
+
+  /* Header */
+  header {
+    text-align: center;
+    margin-bottom: 32px;
+    max-width: 680px;
+  }
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.5px; }
+  .subtitle {
+    color: var(--text2);
+    font-size: 0.85rem;
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+  .badge {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--accent2);
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-top: 8px;
+  }
+
+  /* Main card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    width: 100%;
+    max-width: 780px;
+    margin-bottom: 16px;
+  }
+
+  /* Bits selector */
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .controls label { color: var(--text2); font-size: 0.82rem; }
+  .bits-group {
+    display: flex;
+    gap: 6px;
+  }
+  .bits-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 5px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    transition: all 0.15s;
+  }
+  .bits-btn:hover { border-color: var(--accent); color: var(--text); }
+  .bits-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+  .mode-label {
+    font-size: 0.75rem;
+    color: var(--text2);
+    margin-left: 4px;
+  }
+
+  /* Textarea */
+  .input-area {
+    position: relative;
+    margin-bottom: 12px;
+  }
+  textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    padding: 14px;
+    resize: vertical;
+    min-height: 130px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: var(--text2); }
+  .token-count {
+    position: absolute;
+    bottom: 8px; right: 12px;
+    font-size: 0.72rem;
+    color: var(--text2);
+    pointer-events: none;
+  }
+
+  /* Optimize button */
+  .btn-optimize {
+    width: 100%;
+    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 0.95rem;
+    font-weight: 600;
+    padding: 12px;
+    letter-spacing: 0.3px;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .btn-optimize:hover { opacity: 0.9; }
+  .btn-optimize:active { transform: scale(0.99); }
+
+  /* Results */
+  .results { display: none; }
+  .results.visible { display: block; }
+
+  /* Stats bar */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .stat-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+  }
+  .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .stat-label {
+    font-size: 0.72rem;
+    color: var(--text2);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .stat-value.green { color: var(--green); }
+  .stat-value.yellow { color: var(--yellow); }
+  .stat-value.accent { color: var(--accent); }
+
+  /* Progress bar */
+  .progress-wrap {
+    background: var(--surface2);
+    border-radius: 4px;
+    height: 6px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.4s ease;
+  }
+
+  /* Before / After */
+  .diff-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  @media (max-width: 560px) { .diff-grid { grid-template-columns: 1fr; } }
+  .diff-box { border-radius: 8px; overflow: hidden; }
+  .diff-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .diff-header.before { background: #1e1b2e; color: var(--red); border: 1px solid #3a2040; border-bottom: none; }
+  .diff-header.after  { background: #0f2420; color: var(--green); border: 1px solid #1a3830; border-bottom: none; }
+  .diff-content {
+    padding: 12px;
+    font-size: 0.85rem;
+    line-height: 1.65;
+    min-height: 80px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .diff-content.before { background: #17142a; border: 1px solid #3a2040; border-top: none; border-radius: 0 0 8px 8px; }
+  .diff-content.after  { background: #0d1e1b; border: 1px solid #1a3830; border-top: none; border-radius: 0 0 8px 8px; }
+
+  /* Copy button */
+  .btn-copy {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text2);
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 0.78rem;
+    padding: 4px 10px;
+  }
+  .btn-copy:hover { color: var(--text); border-color: var(--accent2); }
+
+  /* Units info */
+  .units-info {
+    color: var(--text2);
+    font-size: 0.78rem;
+    text-align: center;
+    margin-top: 8px;
+  }
+
+  /* Divider */
+  hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+  /* Footer */
+  footer {
+    color: var(--text2);
+    font-size: 0.72rem;
+    text-align: center;
+    margin-top: 8px;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">&#x2316;</div>
+    <h1>PromptPolarQuant</h1>
+  </div>
+  <p class="subtitle">
+    Token optimizer for AI prompts &mdash; adapted from
+    <a href="https://arxiv.org/abs/2502.02617" target="_blank" style="color:var(--accent2)">PolarQuant</a>
+    (Google/KAIST, 2025). Reduces tokens by 30&ndash;66% using polar coordinate quantization.
+  </p>
+  <span class="badge">MIT &bull; No dependencies &bull; FR + EN</span>
+</header>
+
+<div class="card">
+  <div class="controls">
+    <label>Quantization depth:</label>
+    <div class="bits-group">
+      <button class="bits-btn" data-bits="4">4-bit<span class="mode-label">aggressive</span></button>
+      <button class="bits-btn active" data-bits="6">6-bit<span class="mode-label">balanced</span></button>
+      <button class="bits-btn" data-bits="8">8-bit<span class="mode-label">light</span></button>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <textarea id="inputPrompt" placeholder="Paste your prompt here (FR or EN)&#10;&#10;Example: Could you please provide me with a comprehensive explanation of how transformers work, with regard to the attention mechanism? Thank you in advance for your thorough response."
+    ></textarea>
+    <span class="token-count" id="inputCount">0 tokens</span>
+  </div>
+
+  <button class="btn-optimize" onclick="runOptimize()">&#x26A1; Optimize tokens</button>
+</div>
+
+<div class="card results" id="results">
+  <div class="stats-row">
+    <div class="stat-box">
+      <div class="stat-value accent" id="statOrig">—</div>
+      <div class="stat-label">Original tokens</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value green" id="statOpt">—</div>
+      <div class="stat-label">Optimized tokens</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value yellow" id="statRed">—%</div>
+      <div class="stat-label">Reduction</div>
+    </div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-bar" id="progressBar" style="width:0%"></div>
+  </div>
+
+  <div class="diff-grid">
+    <div class="diff-box">
+      <div class="diff-header before">
+        &#x2715; Before
+        <span id="beforeTokens" style="font-weight:400;opacity:.7"></span>
+      </div>
+      <div class="diff-content before" id="diffBefore"></div>
+    </div>
+    <div class="diff-box">
+      <div class="diff-header after">
+        &#x2713; After
+        <button class="btn-copy" onclick="copyResult()">Copy</button>
+      </div>
+      <div class="diff-content after" id="diffAfter"></div>
+    </div>
+  </div>
+
+  <div class="units-info" id="unitsInfo"></div>
+</div>
+
+<footer>
+  <a href="https://github.com/LePr0fesseur/Prompt-Polarquant" target="_blank">GitHub</a>
+  &bull;
+  Inspired by <a href="https://arxiv.org/abs/2502.02617" target="_blank">PolarQuant (arxiv:2502.02617)</a>
+  &amp; <a href="https://research.google/blog/turboquant-redefining-ai-efficiency-with-extreme-compression/" target="_blank">TurboQuant (Google ICLR 2026)</a>
+</footer>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// PromptPolarQuant — JavaScript port
+// ─────────────────────────────────────────────────────────────────────────────
+
+const STOPWORDS = new Set([
+  // FR
+  "le","la","les","un","une","des","de","du","au","aux","ce","cet","cette","ces",
+  "mon","ma","mes","ton","ta","tes","son","sa","ses","notre","votre","leur","leurs",
+  "je","tu","il","elle","on","nous","vous","ils","elles","me","te","se","lui","y","en",
+  "et","ou","mais","donc","or","ni","car","que","qui","quoi","dont","si","comme",
+  "quand","lorsque","puisque","est","sont","était","été","être","avoir","a","ont",
+  "plus","très","bien","ainsi","alors","aussi","encore","même","tout","tous","toute",
+  "toutes","ici","là","puis","enfin","dans","sur","sous","avec","sans","par","pour",
+  "vers","entre","avant","après","pendant","depuis","jusqu",
+  // EN
+  "a","an","the","is","are","was","were","be","been","being","have","has","had",
+  "do","does","did","will","would","could","should","may","might","shall","can",
+  "i","you","he","she","it","we","they","me","him","her","us","them","my","your",
+  "his","its","our","their","this","that","these","those","which","who","whom",
+  "whose","what","when","where","why","how","and","or","but","nor","so","yet",
+  "in","on","at","to","of","by","with","from","into","about","as","if","than",
+  "then","also","just","not","no","very","more","most","such","each","both","all",
+  "any","few","much","for"
+]);
+
+const CODEBOOK = [
+  // FR — verbose → compact
+  [/c'est-à-dire/gi, "soit"],
+  [/en d'autres termes/gi, "i.e."],
+  [/par exemple/gi, "ex."],
+  [/afin de/gi, "pour"],
+  [/afin que/gi, "pour que"],
+  [/de manière à/gi, "pour"],
+  [/de façon à/gi, "pour"],
+  [/en ce qui concerne/gi, "sur"],
+  [/par rapport à/gi, "vs"],
+  [/du fait que/gi, "car"],
+  [/étant donné que/gi, "car"],
+  [/vu que/gi, "car"],
+  [/cependant/gi, "mais"],
+  [/toutefois/gi, "mais"],
+  [/néanmoins/gi, "mais"],
+  [/par conséquent/gi, "donc"],
+  [/en conséquence/gi, "donc"],
+  [/ainsi que/gi, "et"],
+  [/cordialement[,.]?/gi, ""],
+  [/merci d'avance[,.]?/gi, ""],
+  [/je vous remercie[,.]?/gi, ""],
+  [/je t'en prie[,.]?/gi, ""],
+  [/je vous en prie[,.]?/gi, ""],
+  [/s'il vous plaît/gi, "svp"],
+  [/s'il te plaît/gi, "stp"],
+  [/je voudrais/gi, "je veux"],
+  [/j'aimerais/gi, "je veux"],
+  [/je souhaiterais/gi, "je veux"],
+  [/pourriez-vous/gi, "peux-tu"],
+  [/pourrait-on/gi, "peut-on"],
+  [/il faut\b/gi, "=>"],
+  // EN — verbose → compact
+  [/in other words/gi, "i.e."],
+  [/for example/gi, "e.g."],
+  [/for instance/gi, "e.g."],
+  [/in order to/gi, "to"],
+  [/in order for/gi, "for"],
+  [/due to the fact that/gi, "because"],
+  [/with regard to/gi, "on"],
+  [/with respect to/gi, "on"],
+  [/as a result/gi, "so"],
+  [/consequently/gi, "so"],
+  [/nevertheless/gi, "but"],
+  [/however/gi, "but"],
+  [/furthermore/gi, "also"],
+  [/in addition/gi, "also"],
+  [/moreover/gi, "also"],
+  [/could you please/gi, "please"],
+  [/i would like to/gi, "i want to"],
+  [/would you be able to/gi, "can you"],
+  [/kind regards[,.]?/gi, ""],
+  [/best regards[,.]?/gi, ""],
+  [/thank you in advance[,.]?/gi, ""],
+  [/thanks in advance[,.]?/gi, ""],
+  [/thank you for your[^.!?]*/gi, ""],
+];
+
+// SHA-256 substitute: fast hash using djb2
+function djb2(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h) ^ str.charCodeAt(i);
+  return (h >>> 0);
+}
+
+function semanticAngle(token) {
+  const N_POLES = 8;
+  const norm = token.toLowerCase();
+  const timeWords = new Set(["avant","après","quand","lors","pendant","depuis","before","after","when","during","since","until","while"]);
+  const locWords  = new Set(["dans","sur","ici","là","où","in","on","at","here","there","where","between"]);
+  const causWords = new Set(["car","parce","puisque","because","since","hence","therefore","thus"]);
+  const metaWords = new Set(["mais","cependant","toutefois","but","however","yet","although","though"]);
+  const actionSfx = ["er","ir","re","ait","ent","ons","ez","ate","ize","ise","ing","ify"];
+  const qualSfx   = ["able","ible","eux","euse","ive","al","el","elle","ful","less","ous"];
+
+  let pole;
+  if (timeWords.has(norm)) pole = 5;
+  else if (locWords.has(norm)) pole = 4;
+  else if (causWords.has(norm)) pole = 6;
+  else if (metaWords.has(norm)) pole = 7;
+  else if (actionSfx.some(s => norm.endsWith(s))) pole = 1;
+  else if (qualSfx.some(s => norm.endsWith(s))) pole = 2;
+  else if (/^\d+[.,]?\d*$/.test(norm)) pole = 3;
+  else { pole = djb2(norm) % N_POLES; }
+
+  const subFrac = (djb2(norm + "_sub") % 10000) / 10000;
+  const baseAngle = (2 * Math.PI * pole) / N_POLES;
+  const subAngle  = (2 * Math.PI / N_POLES) * subFrac;
+  return baseAngle + subAngle;
+}
+
+function tokenize(text) {
+  return (text.match(/[a-zA-ZÀ-ÿ0-9_'-]+|[?!:;]/g) || []);
+}
+
+function segmentUnits(text) {
+  return text.split(/(?<=[.!?])\s+|[;\n]/).map(s => s.trim()).filter(s => s.length > 0);
+}
+
+function computeIdf(allTokensPerUnit) {
+  const N = allTokensPerUnit.length;
+  if (!N) return {};
+  const df = {};
+  allTokensPerUnit.forEach(tokens => {
+    const seen = new Set(tokens.map(t => t.toLowerCase()));
+    seen.forEach(t => { df[t] = (df[t] || 0) + 1; });
+  });
+  const idf = {};
+  Object.entries(df).forEach(([t, freq]) => {
+    idf[t] = Math.log((N + 1) / (freq + 1)) + 1;
+  });
+  return idf;
+}
+
+function tokenRadius(token, idfScore, position, unitLength) {
+  const posWeight = unitLength <= 1 ? 1.0
+    : 0.5 + 0.5 * Math.abs(2 * (position / (unitLength - 1)) - 1);
+  const isStop = STOPWORDS.has(token.toLowerCase());
+  const novelty = isStop ? 0.25 : 1.0;
+  const idfNorm = Math.min(idfScore / 6.0, 1.0);
+  const r = Math.sqrt(idfNorm ** 2 + posWeight ** 2) / Math.sqrt(2);
+  return r * novelty;
+}
+
+function unitPolar(unitText, tokens, idfMap, position) {
+  if (!tokens.length) return { text: unitText, tokens: [], radius: 0, angle: 0, position };
+
+  const tinfo = tokens.map((tok, i) => {
+    const norm = tok.toLowerCase();
+    const idf  = idfMap[norm] || 1.0;
+    const r    = tokenRadius(tok, idf, i, tokens.length);
+    const th   = semanticAngle(tok);
+    const stop = STOPWORDS.has(norm);
+    return { text: tok, radius: r, angle: th, isStop: stop };
+  });
+
+  const contentToks = tinfo.filter(t => !t.isStop);
+  let R_unit;
+  if (!contentToks.length) {
+    R_unit = 0.01;
+  } else {
+    const cRadii = contentToks.map(t => t.radius);
+    const cMean  = cRadii.reduce((a,b)=>a+b,0) / cRadii.length;
+    const cMax   = Math.max(...cRadii);
+    const density = contentToks.length / tinfo.length;
+    R_unit = cMean * Math.sqrt(cMax) * (0.4 + 0.6 * density);
+  }
+
+  const wtoks  = contentToks.length ? contentToks : tinfo;
+  const totW   = wtoks.reduce((s,t) => s + t.radius, 0);
+  let Theta = 0;
+  if (totW > 0) {
+    const cx = wtoks.reduce((s,t) => s + t.radius * Math.cos(t.angle), 0) / totW;
+    const cy = wtoks.reduce((s,t) => s + t.radius * Math.sin(t.angle), 0) / totW;
+    Theta = (Math.atan2(cy, cx) + 2 * Math.PI) % (2 * Math.PI);
+  }
+  return { text: unitText, tokens: tinfo, radius: R_unit, angle: Theta, position };
+}
+
+function quantizeUnits(units, nBits) {
+  if (!units.length) return [];
+  const nLevels = 2 ** nBits;
+  const angleRes = 2 * Math.PI / nLevels;
+
+  const minKeepFrac = Math.max(0.6, 1.0 - (8 - nBits) * 0.10);
+  const nToKeep = Math.max(1, Math.ceil(units.length * minKeepFrac));
+
+  const sorted = [...units].sort((a,b) => b.radius - a.radius);
+  const keptIds = new Set(sorted.slice(0, nToKeep).map(u => u.position));
+  const kept = units.filter(u => keptIds.has(u.position));
+
+  const angleBins = {};
+  kept.forEach(u => {
+    const bin = Math.floor(u.angle / angleRes) % nLevels;
+    if (!(bin in angleBins) || u.radius > angleBins[bin].radius) {
+      angleBins[bin] = u;
+    }
+  });
+
+  return Object.values(angleBins).sort((a,b) => a.position - b.position);
+}
+
+function compressUnitTokens(unit, nBits) {
+  if (!unit.tokens.length) return unit.text;
+  const radii = unit.tokens.map(t => t.radius);
+  const maxR  = Math.max(...radii);
+  const stopThreshold = maxR * Math.max(0.10, 0.52 - nBits * 0.04);
+
+  let kept = unit.tokens.filter(t => !(t.isStop && t.radius < stopThreshold));
+
+  const minKeep = Math.max(2, Math.floor(unit.tokens.length / 2));
+  if (kept.length < minKeep) {
+    const sortedByR = [...unit.tokens].sort((a,b) => b.radius - a.radius);
+    const topTexts  = new Set(sortedByR.slice(0, minKeep).map(t => t.text));
+    kept = unit.tokens.filter(t => topTexts.has(t.text));
+  }
+  return kept.map(t => t.text).join(" ");
+}
+
+function applyCodebook(text) {
+  let t = text;
+  CODEBOOK.forEach(([pat, rep]) => { t = t.replace(pat, rep); });
+  return t.replace(/ {2,}/g, " ").trim();
+}
+
+function countTokens(text) {
+  const words = (text.match(/[a-zA-ZÀ-ÿ]+|[0-9]+|\S/g) || []);
+  let total = 0;
+  words.forEach(w => {
+    if (w.length <= 3) total += 0.75;
+    else if (w.length <= 7) total += 1.0;
+    else total += Math.max(1.0, w.length / 5.0);
+  });
+  return Math.max(1, Math.round(total));
+}
+
+function optimizePrompt(prompt, nBits) {
+  if (!prompt.trim()) return { result: "", stats: {} };
+
+  const text   = applyCodebook(prompt);
+  const rawU   = segmentUnits(text);
+  if (!rawU.length) return { result: prompt, stats: {} };
+
+  const tokU   = rawU.map(u => tokenize(u));
+  const idfMap = computeIdf(tokU);
+
+  const polarU = rawU.map((u, i) => unitPolar(u, tokU[i], idfMap, i));
+  const selU   = quantizeUnits(polarU, nBits);
+
+  const parts  = selU.map(u => {
+    if (u.tokens.length <= 2) return u.text;
+    return compressUnitTokens(u, nBits);
+  });
+
+  const sep    = /[.!?]/.test(prompt) ? ". " : " ";
+  const valid  = parts.filter(p => /[a-zA-ZÀ-ÿ0-9]/.test(p || ""));
+  let result   = valid.join(sep);
+  result = result.replace(/([.!?])\s*\./g, "$1").replace(/ {2,}/g, " ").trim();
+
+  const origTok = countTokens(prompt);
+  const optTok  = countTokens(result);
+  const red     = Math.round((1 - optTok / origTok) * 1000) / 10;
+
+  return {
+    result,
+    stats: {
+      originalTokens:  origTok,
+      optimizedTokens: optTok,
+      reduction:       red,
+      originalUnits:   rawU.length,
+      selectedUnits:   selU.length,
+      ratio:           Math.round(origTok / Math.max(1, optTok) * 100) / 100
+    }
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UI
+// ─────────────────────────────────────────────────────────────────────────────
+
+let currentBits = 6;
+
+document.querySelectorAll(".bits-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".bits-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentBits = parseInt(btn.dataset.bits);
+    // Re-run if there's already a result
+    const prompt = document.getElementById("inputPrompt").value.trim();
+    if (prompt && document.getElementById("results").classList.contains("visible")) {
+      runOptimize();
+    }
+  });
+});
+
+document.getElementById("inputPrompt").addEventListener("input", function() {
+  const n = countTokens(this.value);
+  document.getElementById("inputCount").textContent = n + " tokens";
+});
+
+function runOptimize() {
+  const prompt = document.getElementById("inputPrompt").value.trim();
+  if (!prompt) return;
+
+  const { result, stats } = optimizePrompt(prompt, currentBits);
+
+  // Stats
+  document.getElementById("statOrig").textContent = stats.originalTokens;
+  document.getElementById("statOpt").textContent  = stats.optimizedTokens;
+  document.getElementById("statRed").textContent  = stats.reduction + "%";
+  document.getElementById("progressBar").style.width = Math.min(100, stats.reduction) + "%";
+  document.getElementById("beforeTokens").textContent = stats.originalTokens + " tok";
+
+  // Diff
+  document.getElementById("diffBefore").textContent = prompt;
+  document.getElementById("diffAfter").textContent  = result;
+
+  // Units info
+  document.getElementById("unitsInfo").textContent =
+    `Semantic units: ${stats.originalUnits} → ${stats.selectedUnits}  ·  Ratio: ${stats.ratio}x  ·  Bits: ${currentBits}`;
+
+  document.getElementById("results").classList.add("visible");
+  document.getElementById("results").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function copyResult() {
+  const text = document.getElementById("diffAfter").textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector(".btn-copy");
+    btn.textContent = "Copied!";
+    setTimeout(() => btn.textContent = "Copy", 1500);
+  });
+}
+
+// Enter to submit (Shift+Enter = newline)
+document.getElementById("inputPrompt").addEventListener("keydown", function(e) {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); runOptimize(); }
+});
+</script>
+</body>
+</html>
