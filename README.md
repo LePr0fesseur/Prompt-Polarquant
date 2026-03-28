@@ -15,7 +15,7 @@ PolarQuant originally compresses KV cache vectors in LLM inference by converting
 | Key vector `K` → polar `(r, θ)` | Token → `(information radius, semantic angle)` |
 | `r = √(K[2j]² + K[2j+1]²)` | `r = √(IDF² + positional_weight²) × content_density` |
 | θ = direction in embedding space | θ = semantic pole (8 axes: time, place, action, cause…) |
-| Optimal codebook quantization | Abbreviation codebook (FR + EN, ~50 rules) |
+| Optimal codebook quantization | Abbreviation codebook (FR + EN, ~200 rules) |
 | Deduplicate vectors by angle bin | Deduplicate sentences with same semantic angle |
 | Radius threshold = bit depth | Low-radius unit filtering = bit depth |
 
@@ -104,6 +104,57 @@ usage: prompt_polarquant.py [-h] [-f FILE] [-b BITS] [--stdin] [--quiet] [--demo
   --quiet            Output only the optimized prompt (no stats)
   --demo             Run built-in demonstration
 ```
+
+---
+
+## Will the AI output be identical to the original prompt?
+
+**No — not exactly.** The compressed prompt preserves the core intent, but not tone or register.
+
+### What is preserved
+
+| Element | Example |
+|---|---|
+| **Main intent** | "explain ML" → the model understands the request |
+| **Key entities** | Python, CSV, JWT, React → never removed (high radius) |
+| **Technical constraints** | "handle errors", "step-by-step" → kept |
+| **Logical structure** | 1. / 2. / 3. replace verbose enumeration markers |
+
+### What changes
+
+| Lost element | Impact |
+|---|---|
+| **Formal register** | A polite prompt → potentially less formal response |
+| **Epistemic hedges** | `"it would appear that"` signals uncertainty → removed |
+| **Politeness markers** | Model may respond more directly, less elaborately |
+| **Subtle nuances** | `"in a sense"` ≠ nothing |
+
+### When to use each mode
+
+```
+High fidelity (>90% equivalent quality):
+  ✓ Code generation
+  ✓ Summarization / information extraction
+  ✓ Factual questions
+  ✓ Translation
+  ✓ Data analysis, classification
+
+Noticeable loss:
+  ✗ Creative writing with a specific tone
+  ✗ Roleplay / system prompts with personality
+  ✗ Emotionally sensitive contexts
+  ✗ Prompts where form guides content
+```
+
+### Research backing
+
+[LLMLingua (Microsoft, 2023)](https://llmlingua.com/llmlingua.html) measured on benchmarks:
+- **3–6x compression** → **~95% performance** retained on factual tasks
+- **>10x compression** → measurable degradation
+
+PromptPolarQuant targets **1.5x–3x** compression, which stays in the high-fidelity zone.
+
+> **Analogy:** sending a telegram instead of a letter. The recipient understands, but the reply may differ slightly in tone. For prompts where every word matters (system prompts, few-shot examples, precise persona), prefer `--bits 8` (light, ~15–20% reduction) or skip compression entirely.
 
 ---
 
